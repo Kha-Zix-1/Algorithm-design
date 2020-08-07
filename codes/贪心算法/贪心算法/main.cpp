@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstring>
 #include <algorithm>
+#include <ctime>
 using namespace std;
 
 #define SIZE 10005
@@ -21,8 +22,7 @@ bool comp(int x, int y) {
 }
 
 void print() {
-	printf("\nresult: %d\n\n", result);
-
+	
 	for (i = 1; i <= result; i++) {
 		printf("bin %d loads: ", i);
 		for (j = 1; j <= rec[i].num; j++) {
@@ -30,6 +30,8 @@ void print() {
 		}
 		printf("\nbin %d space left:%d\n\n", i, capacity - bin[i]);
 	}
+
+	printf("\nresult: %d\n", result);
 }
 
 int main() {
@@ -39,6 +41,7 @@ int main() {
 		scanf("%d", &item[i]);
 	}
 
+	clock_t time_start = clock();
 	sort(item + 1, item + 1 + num, comp);
 
 	for (i = 1; i <= num; i++) {
@@ -57,6 +60,8 @@ int main() {
 	}
 
 	print();
+	clock_t time_end = clock();
+	cout << "time use: " << 1000 * (time_end - time_start) / (double)CLOCKS_PER_SEC << "ms" << endl;
 
 	return 0;
 }
