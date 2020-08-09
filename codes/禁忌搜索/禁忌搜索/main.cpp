@@ -142,7 +142,7 @@ int main() {
 
 	}
 
-	printf("\nbefore SA result: %d\nafter SA result: %d\n", before, best_result);
+	printf("\nbefore TS result: %d\nafter TS result: %d\n", before, best_result);
 	clock_t time_end = clock();
 	cout << "time use: " << 1000 * (time_end - time_start) / (double)CLOCKS_PER_SEC << "ms" << endl;
 }
