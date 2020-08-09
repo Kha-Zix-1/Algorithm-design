@@ -56,6 +56,8 @@ int main() {
 		printf("No.%d: %d\n", i, item[i]);
 	}*/
 
+	sort(item + 1, item + 1 + num);
+
 	clock_t time_start = clock();
 	while (load_num < num) {
 		result++;

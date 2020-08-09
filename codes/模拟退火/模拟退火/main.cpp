@@ -103,6 +103,7 @@ int main() {
 		scanf("%d", &item[i]);
 	}
 
+	clock_t time_start = clock();
 	srand((unsigned)(time(NULL)));
 	current_tem = INIT_TEM;
 
@@ -136,4 +137,6 @@ int main() {
 	}
 
 	printf("\nbefore SA result: %d\nafter SA result: %d\n", before, best_result);
+	clock_t time_end = clock();
+	cout << "time use: " << 1000 * (time_end - time_start) / (double)CLOCKS_PER_SEC << "ms" << endl;
 }
