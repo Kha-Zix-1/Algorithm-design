@@ -220,8 +220,11 @@ for (i = 1; i <= num / 5; i++) {
 与选择的迭代次数有关有关。贪心算法的时间复杂度为 ***O(num<sup>2</sup>)*** ，禁忌搜索只需要再乘以对应的迭代次数即可。
 
 ## 算法比较
+![result](./image/result.png)
 
-
+从结果的最优性上来说，动态规划的结果优于其他三种算法；从时间上来说，贪心算法的运行时间最短，这与我们之前的分析是一致的。模拟退火、禁忌搜索一开始的初始化最优解为贪心算法得到的解，理论上在迭代次数足够多的情况下可以搜索到动态规划所对应的物品排列顺序，但可能由于测试数据的原因，即使是贪心算法求出来的解只比最优解多用一个箱子，也就是动态规划对应的物品排列方式是非常苛刻的，因此两种启发式算法都没有在本次实验中得到动态规划的最优解。             
+总的来说，如果数据再大一点或者强一点，动态规划会在花费时间较长的情况下求出最优解，而贪心算法会在花费极短时间的情况下求出一个逻辑上的最优近似解，而启发式算法由于时间复杂度根据迭代次数，所以有可能运行时间比动态规划长，但求出的解理论上位于贪心算法与动态规划之间。            
+对于本次实验所用的测试数据，选择贪心算法是最优的，因为贪心算法能在极短时间内算出答案，并且保证解最多比真正的最优解多用一个箱子，这对于现实实践也是可以接受的。而对于强一点的数据，则应选择用启发式算法，因为动态规划的复杂度是 **求解次数** * ***O(num\*capacity)*** ，求解次数由每一次选出的物品数量决定，而启发式算法的求解复杂度与箱子容量无关，而求解次数可以根据要求解的可接受范围自行调整。在时间允许的情况下，可以利用动态规划算法牺牲时间来求出最优解。
 
 ## 附录: 源代码
 
@@ -269,7 +272,7 @@ void print() {
 		}
 	}
 
-	assert(sum == dp[num][capacity]);	//防止回溯过程出错
+	assert(sum == dp[num][capacity]);	//防止回溯出错
 	printf("\nbin %d space left:%d\n\n", result, capacity - dp[num][capacity]);
 	
 
@@ -282,9 +285,7 @@ int main() {
 		scanf("%d", &item[i]);
 	}
 
-	/*for (i = 1; i <= num; i++) {
-		printf("No.%d: %d\n", i, item[i]);
-	}*/
+	sort(item + 1, item + 1 + num);
 
 	clock_t time_start = clock();
 	while (load_num < num) {
@@ -382,5 +383,300 @@ int main() {
 	cout << "time use: " << 1000 * (time_end - time_start) / (double)CLOCKS_PER_SEC << "ms" << endl;
 
 	return 0;
+}
+```
+
+### 模拟退火
+
+``` C++
+#include <iostream>
+#include <cstdio>
+#include <ctime>
+#include <algorithm>
+using namespace std;
+
+#define INIT_TEM 100.0
+#define MIN_TEM 0.1
+#define cold_speed 0.97
+#define k 0.01
+#define SIZE 10005
+#define SWAP_NUM 1000
+
+int bin[SIZE] = { 0 }, item[SIZE], temp[SIZE];
+int num, capacity, result = 0, i, j, best_result;
+double current_tem;
+
+typedef struct record {
+	int num, r[SIZE];
+	record() : num(0) {}
+}Record;
+
+Record rec[SIZE];
+
+bool comp(int x, int y) {
+	return x > y;
+}
+
+void print() {
+
+	for (i = 1; i <= result; i++) {
+		printf("bin %d loads: ", i);
+		for (j = 1; j <= rec[i].num; j++) {
+			printf("%d ", rec[i].r[j]);
+		}
+		printf("\nbin %d space left:%d\n\n", i, capacity - bin[i]);
+	}
+
+	printf("\nresult: %d\n", result);
+}
+
+void first_fit() {
+	result = 0;
+	memset(bin, 0, sizeof(bin));
+
+	for (i = 1; i <= num; i++) {
+		for (j = 1; j <= result; j++) {
+			if (capacity - bin[j] >= item[i]) {
+				bin[j] += item[i];
+				rec[j].r[++rec[j].num] = i;
+				break;
+			}
+		}
+
+		if (j > result) {
+			bin[++result] += item[i];
+			rec[result].r[++rec[result].num] = i;
+		}
+	}
+
+	//print();
+}
+
+void save() {
+	for (i = 1; i <= num; i++) {
+		temp[i] = item[i];
+	}
+}
+
+void back() {
+	for (i = 1; i <= num; i++) {
+		item[i] = temp[i];
+	}
+}
+
+void rand_swap() {
+	int pos1, pos2;
+
+	for (i = 1; i <= SWAP_NUM; i++) {
+		pos1 = rand() % num + 1;
+		pos2 = rand() % num + 1;
+
+		if (pos1 != pos2) {
+			swap(item[pos1], item[pos2]);
+		}
+	}
+
+}
+
+double random(double dblow, double dbhigh)//产生dblow-dbhigh之间随机数
+{
+	double dbtemp = rand() / ((double)RAND_MAX + 1.0);
+	return dblow + dbtemp * (dbhigh - dblow);
+}
+
+
+
+int main() {
+	int dE, before, total = 0;
+	
+	scanf("%d%d", &num, &capacity);
+	for (i = 1; i <= num; i++) {
+		scanf("%d", &item[i]);
+	}
+
+	clock_t time_start = clock();
+	srand((unsigned)(time(NULL)));
+	current_tem = INIT_TEM;
+
+	sort(item + 1, item + 1 + num, comp);
+
+	first_fit();
+	best_result = result;
+	before = best_result;
+
+	printf("Initial best result: %d\n\n", result);
+
+	while (current_tem >= MIN_TEM) {
+		save();
+		rand_swap();
+		first_fit();
+		dE = result - best_result;
+
+		printf("Iteration %d:\ntem: %.2lf\nresult: %d\n\n",++total, current_tem, result);
+
+		if (dE <= 0) {
+			best_result = result;
+		}
+		else if (exp(-dE / (current_tem * k)) > random(0.0, 1.0)) {
+			best_result = result;
+		}
+		else {
+			back();
+		}
+
+		current_tem = cold_speed * current_tem;
+	}
+
+	printf("\nbefore SA result: %d\nafter SA result: %d\n", before, best_result);
+	clock_t time_end = clock();
+	cout << "time use: " << 1000 * (time_end - time_start) / (double)CLOCKS_PER_SEC << "ms" << endl;
+}
+```
+
+### 禁忌搜索
+
+``` C++
+#include <iostream>
+#include <cstdio>
+#include <ctime>
+#include <algorithm>
+using namespace std;
+
+#define SIZE 10005
+#define SWAP_NUM 1000
+
+int bin[SIZE] = { 0 }, item[SIZE], temp[SIZE], cnt[SIZE] = { 0 };
+int num, capacity, result = 0, i, j, best_result;
+double current_tem;
+
+typedef struct record {
+	int num, r[SIZE];
+	record() : num(0) {}
+}Record;
+
+Record rec[SIZE];
+
+bool comp(int x, int y) {
+	return x > y;
+}
+
+void print() {
+
+	for (i = 1; i <= result; i++) {
+		printf("bin %d loads: ", i);
+		for (j = 1; j <= rec[i].num; j++) {
+			printf("%d ", rec[i].r[j]);
+		}
+		printf("\nbin %d space left:%d\n\n", i, capacity - bin[i]);
+	}
+
+	printf("\nresult: %d\n", result);
+}
+
+void first_fit() {
+	result = 0;
+	memset(bin, 0, sizeof(bin));
+
+	for (i = 1; i <= num; i++) {
+		for (j = 1; j <= result; j++) {
+			if (capacity - bin[j] >= item[i]) {
+				bin[j] += item[i];
+				rec[j].r[++rec[j].num] = i;
+				break;
+			}
+		}
+
+		if (j > result) {
+			bin[++result] += item[i];
+			rec[result].r[++rec[result].num] = i;
+		}
+	}
+
+	//print();
+}
+
+void save() {
+	for (i = 1; i <= num; i++) {
+		temp[i] = item[i];
+	}
+}
+
+void back() {
+	for (i = 1; i <= num; i++) {
+		item[i] = temp[i];
+	}
+}
+
+void rand_swap() {
+	int pos1, pos2;
+
+	for (i = 1; i <= num; i++) {
+		if (cnt[i] != 0) {
+			cnt[i] = (cnt[i] + 1) % 3;
+		}
+	}
+
+	for (i = 1; i <= num / 5; i++) {
+		pos1 = rand() % num + 1;
+		pos2 = rand() % num + 1;
+
+		if (pos1 != pos2 && cnt[pos1] == 0 && cnt[pos2] == 0) {
+			swap(item[pos1], item[pos2]);
+			cnt[pos1] = cnt[pos2] = 1;
+		}
+		else {
+			--i;
+		}
+	}
+
+}
+
+double random(double dblow, double dbhigh)//产生dblow-dbhigh之间随机数
+{
+	double dbtemp = rand() / ((double)RAND_MAX + 1.0);
+	return dblow + dbtemp * (dbhigh - dblow);
+}
+
+
+
+int main() {
+	int dE, before, total = 0;
+
+	scanf("%d%d", &num, &capacity);
+	for (i = 1; i <= num; i++) {
+		scanf("%d", &item[i]);
+	}
+
+	clock_t time_start = clock();
+	srand((unsigned)(time(NULL)));
+
+	sort(item + 1, item + 1 + num, comp);
+
+	first_fit();
+	best_result = result;
+	before = best_result;
+
+	printf("Initial best result: %d\n\n", result);
+
+	while (total <= 10000) {
+		save();
+		rand_swap();
+		first_fit();
+		dE = result - best_result;
+
+		printf("Iteration %d:\nresult: %d\n\n", ++total, result);
+
+		if (dE <= 0) {
+			best_result = result;
+		}
+		else {
+			back();
+		}
+
+	}
+
+	printf("\nbefore TS result: %d\nafter TS result: %d\n", before, best_result);
+	clock_t time_end = clock();
+	cout << "time use: " << 1000 * (time_end - time_start) / (double)CLOCKS_PER_SEC << "ms" << endl;
 }
 ```
